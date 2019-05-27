@@ -1,5 +1,5 @@
 (*---------------------------------------------------------------------------
-   Copyright (c) 2014 Daniel C. Bünzli. All rights reserved.
+   Copyright (c) 2014 The fmt programmers. All rights reserved.
    Distributed under the ISC license, see terms at the end of the file.
    %%NAME%% %%VERSION%%
   ---------------------------------------------------------------------------*)
@@ -16,15 +16,24 @@
 
     {e %%VERSION%% - {{:%%PKG_HOMEPAGE%% }homepage}} *)
 
+(** {1:stdos Standard outputs} *)
+
+val stdout : Format.formatter
+(** [stdout] is the standard output formatter. *)
+
+val stderr : Format.formatter
+(** [stderr] is the standard error formatter. *)
+
 (** {1:formatting Formatting} *)
 
-val pf : Format.formatter ->
-  ('a, Format.formatter, unit) Pervasives.format -> 'a
+val pf : Format.formatter -> ('a, Format.formatter, unit) Stdlib.format -> 'a
 (** [pf] is {!Format.fprintf}. *)
 
-val kpf : (Format.formatter -> 'a) -> Format.formatter ->
-  ('b, Format.formatter, unit, 'a) format4 -> 'b
-(** [kpf] is {!Format.kfprintf}. *)
+val pr : ('a, Format.formatter, unit) format -> 'a
+(** [pr] is [pf stdout]. *)
+
+val epr : ('a, Format.formatter, unit) format -> 'a
+(** [epr] is [pf stderr]. *)
 
 val strf : ('a, Format.formatter, unit, string) format4 -> 'a
 (** [strf] is {!Format.asprintf}.
@@ -32,6 +41,10 @@ val strf : ('a, Format.formatter, unit, string) format4 -> 'a
     {b Note.} When using [strf] {!utf_8} and {!style_renderer} are
     always respectively set to [true] and [`None]. See also
     {!strf_like}. *)
+
+val kpf : (Format.formatter -> 'a) -> Format.formatter ->
+  ('b, Format.formatter, unit, 'a) Stdlib.format4 -> 'b
+(** [kpf] is {!Format.kfprintf}. *)
 
 val kstrf : (string -> 'a) ->
   ('b, Format.formatter, unit, 'a) format4 -> 'b
@@ -46,29 +59,15 @@ val with_buffer : ?like:Format.formatter -> Buffer.t -> Format.formatter
 (** [with_buffer ~like b] is a formatter whose {!utf_8} and {!style_renderer}
     settings are copied from those of {!like} (if provided). *)
 
-(** {1:fmt Formatting to standard outputs} *)
-
-val stdout : Format.formatter
-(** [stdout] is the standard output formatter. *)
-
-val stderr : Format.formatter
-(** [stderr] is the standard error formatter. *)
-
-val pr : ('a, Format.formatter, unit) format -> 'a
-(** [pr] is [pf stdout]. *)
-
-val epr : ('a, Format.formatter, unit) format -> 'a
-(** [epr] is [pf stderr]. *)
-
 (** {1:fmt_exns Formatting exceptions} *)
 
 val failwith : ('a, Format.formatter, unit, 'b) format4 -> 'a
-(** [failwith] is [kstrf failwith], raises {!Pervasives.Failure} with
+(** [failwith] is [kstrf failwith], raises {!Stdlib.Failure} with
     a pretty-printed string argument. *)
 
 val invalid_arg : ('a, Format.formatter, unit, 'b) format4 -> 'a
 (** [invalid_arg] is [kstrf invalid_arg], raises
-    {!Pervasives.Invalid_argument} with a pretty-printed string argument. *)
+    {!Stdlib.Invalid_argument} with a pretty-printed string argument. *)
 
 (** {1 Formatters} *)
 
@@ -90,16 +89,15 @@ val comma : unit t
 val const : 'a t -> 'a -> unit t
 (** [const pp_v v] always formats [v] using [pp_v]. *)
 
-val unit : (unit, Format.formatter, unit) Pervasives.format -> unit t
+val unit : (unit, Format.formatter, unit) Stdlib.format -> unit t
 (** [unit fmt] formats a unit value with the format [fmt]. *)
 
-val fmt : ('a, Format.formatter, unit) Pervasives.format ->
-  Format.formatter -> 'a
+val fmt : ('a, Format.formatter, unit) Stdlib.format -> Format.formatter -> 'a
 (** [fmt fmt ppf] is [pf ppf fmt]. If [fmt] is used with a single
     non-constant formatting directive, generates a value of type
     {!t}. *)
 
-val always : (unit, Format.formatter, unit) Pervasives.format -> 'a t
+val always : (unit, Format.formatter, unit) Stdlib.format -> 'a t
 (** [always fmt ppf v] formats any value with the constant format [fmt]. *)
 
 (** {1:basetypes Base type formatters} *)
@@ -181,7 +179,7 @@ val option : ?none:unit t -> 'a t -> 'a option t
 (** [option ~none pp_v] formats an optional value. The [Some] case
     uses [pp_v] and [None] uses [none] (defaults to {!nop}). *)
 
-val result : ok:'a t -> error:'b t -> ('a, 'b) Result.result t
+val result : ok:'a t -> error:'b t -> ('a, 'b) result t
 (** [result ~ok ~error] formats a result value using [ok] for the [Ok]
     case and [error] for the [Error] case. *)
 
@@ -194,6 +192,11 @@ val array : ?sep:unit t -> 'a t -> 'a array t
 (** [array sep pp_v] formats array elements. Each element of the array
     is formatted in order with [pp_v]. Elements are separated by [sep]
     (defaults to {!cut}). If the array is empty, this is {!nop}. *)
+
+val seq : ?sep:unit t -> 'a t -> 'a Seq.t t
+(** [seq sep pp_v] formats sequence elements. Each element of the sequence
+    is formatted in order with [pp_v]. Elements are separated by [sep]
+    (defaults to {!cut}). If the sequence is empty, this is {!nop}. *)
 
 val hashtbl : ?sep:unit t -> ('a * 'b) t -> ('a, 'b) Hashtbl.t t
 (** [hashtbl ~sep pp_binding] formats the bindings of a hash
@@ -260,7 +263,7 @@ module Dump : sig
   (** [option pp_v] formats an OCaml option using [pp_v] for the [Some]
       case. No parentheses are added. *)
 
-  val result : ok:'a t -> error:'b t -> ('a, 'b) Result.result t
+  val result : ok:'a t -> error:'b t -> ('a, 'b) result t
   (** [result ~ok ~error] formats an OCaml result using [ok] for the [Ok]
       case value and [error] for the [Error] case value. No parentheses
       are added. *)
@@ -271,6 +274,10 @@ module Dump : sig
 
   val array : 'a t -> 'a array t
   (** [array pp_v] formats an OCaml array using [pp_v] for the array
+      elements. *)
+
+  val seq : 'a t -> 'a Seq.t t
+  (** [seq pp_v] formats an OCaml sequence using [pp_v] for the sequence
       elements. *)
 
   val hashtbl : 'a t -> 'b t -> ('a, 'b) Hashtbl.t t
@@ -441,8 +448,8 @@ type style =
 val styled : style -> 'a t -> 'a t
 (** [styled s pp] formats like [pp] but styled with [s]. *)
 
-val styled_unit : style -> (unit, Format.formatter, unit) Pervasives.format ->
-  unit t
+val styled_unit :
+  style -> (unit, Format.formatter, unit) Stdlib.format -> unit t
 (** [styled_unit s fmt] is [style s (unit fmt)]. *)
 
 (** {2 Style rendering control} *)
@@ -501,7 +508,7 @@ val to_to_string : 'a t -> 'a -> string
     [M.dump]. *)
 
 (*---------------------------------------------------------------------------
-   Copyright (c) 2014 Daniel C. Bünzli
+   Copyright (c) 2014 The fmt programmers
 
    Permission to use, copy, modify, and/or distribute this software for any
    purpose with or without fee is hereby granted, provided that the above

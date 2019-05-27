@@ -1,5 +1,5 @@
 (*---------------------------------------------------------------------------
-   Copyright (c) 2014 Daniel C. Bünzli. All rights reserved.
+   Copyright (c) 2014 The fmt programmers. All rights reserved.
    Distributed under the ISC license, see terms at the end of the file.
    %%NAME%% %%VERSION%%
   ---------------------------------------------------------------------------*)
@@ -8,11 +8,16 @@
 
 let err_str_formatter = "Format.str_formatter can't be set."
 
+let stdout = Format.std_formatter
+let stderr = Format.err_formatter
+
 (* Formatting *)
 
 let pf = Format.fprintf
-let kpf = Format.kfprintf
+let pr = Format.printf
+let epr = Format.eprintf
 let strf = Format.asprintf
+let kpf = Format.kfprintf
 let kstrf f fmt =
   let buf = Buffer.create 64 in
   let f fmt =
@@ -24,10 +29,6 @@ let kstrf f fmt =
 
 (* Standard output formatting *)
 
-let stdout = Format.std_formatter
-let stderr = Format.err_formatter
-let pr = Format.printf
-let epr = Format.eprintf
 
 (* Exception formatting *)
 
@@ -112,8 +113,8 @@ let option ?none:(pp_none = nop) pp_v ppf = function
 | Some v -> pp_v ppf v
 
 let result ~ok ~error ppf = function
-| Result.Ok v -> ok ppf v
-| Result.Error e -> error ppf e
+| Ok v -> ok ppf v
+| Error e -> error ppf e
 
 let iter ?sep:(pp_sep = cut) iter pp_elt ppf v =
   let is_first = ref true in
@@ -133,6 +134,7 @@ let iter_bindings ?sep:(pp_sep = cut) iter pp_binding ppf v =
 
 let list ?sep pp_elt = iter ?sep List.iter pp_elt
 let array ?sep pp_elt = iter ?sep Array.iter pp_elt
+let seq ?sep pp_elt = iter ?sep Seq.iter pp_elt
 let hashtbl ?sep pp_binding = iter_bindings ?sep Hashtbl.iter pp_binding
 let queue ?sep pp_elt = iter Queue.iter pp_elt
 let stack ?sep pp_elt = iter Stack.iter pp_elt
@@ -163,6 +165,13 @@ module Dump = struct
   | s when s = Sys.sigttou -> string ppf "SIGTTOU"
   | s when s = Sys.sigvtalrm -> string ppf "SIGVTALRM"
   | s when s = Sys.sigprof -> string ppf "SIGPROF"
+  | s when s = Sys.sigbus -> string ppf "SIGBUS"
+  | s when s = Sys.sigpoll -> string ppf "SIGPOLL"
+  | s when s = Sys.sigsys -> string ppf "SIGSYS"
+  | s when s = Sys.sigtrap -> string ppf "SIGTRAP"
+  | s when s = Sys.sigurg -> string ppf "SIGURG"
+  | s when s = Sys.sigxcpu -> string ppf "SIGXCPU"
+  | s when s = Sys.sigxfsz -> string ppf "SIGXFSZ"
   | unknown -> pf ppf "SIG(%d)" unknown
 
   let uchar ppf u = pf ppf "U+%04X" (Uchar.to_int u)
@@ -175,8 +184,8 @@ module Dump = struct
   | Some v -> pf ppf "@[<2>Some@ @[%a@]@]" pp_v v
 
   let result ~ok ~error ppf = function
-  | Result.Ok v -> pf ppf "@[<2>Ok@ @[%a@]@]" ok v
-  | Result.Error e -> pf ppf "@[<2>Error@ @[%a@]@]" error e
+  | Ok v -> pf ppf "@[<2>Ok@ @[%a@]@]" ok v
+  | Error e -> pf ppf "@[<2>Error@ @[%a@]@]" error e
 
   let list pp_elt ppf vs =
     let rec loop = function
@@ -194,6 +203,16 @@ module Dump = struct
       pf ppf ";@ @[%a@]" pp_elt a.(i)
     done;
     pf ppf "|]@]"
+
+  let seq pp_elt ppf s =
+    let rec loop = function
+    | Seq.Nil -> ()
+    | Seq.Cons (v, vs) ->
+        match vs () with
+        | Seq.Nil -> pf ppf "@[%a@]" pp_elt v
+        | Seq.Cons _ as next -> pf ppf "@[%a@];@ " pp_elt v; loop next
+    in
+    pf ppf "@[<1>["; loop (s ()); pf ppf "]@]"
 
   let iter iter pp_name pp_elt ppf v =
     let is_first = ref true in
@@ -502,7 +521,7 @@ let of_to_string f ppf v = string ppf (f v)
 let to_to_string pp_v v = strf "%a" pp_v v
 
 (*---------------------------------------------------------------------------
-   Copyright (c) 2014 Daniel C. Bünzli
+   Copyright (c) 2014 The fmt programmers
 
    Permission to use, copy, modify, and/or distribute this software for any
    purpose with or without fee is hereby granted, provided that the above

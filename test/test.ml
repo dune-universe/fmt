@@ -1,9 +1,10 @@
 (*---------------------------------------------------------------------------
-   Copyright (c) 2015 Daniel C. Bünzli. All rights reserved.
+   Copyright (c) 2015 The fmt programmers. All rights reserved.
    Distributed under the ISC license, see terms at the end of the file.
    %%NAME%% %%VERSION%%
   ---------------------------------------------------------------------------*)
 
+(*
 let test_exn_backtrace () = (* Don't move this test in the file. *)
   try failwith "Test" with
   | ex ->
@@ -16,6 +17,7 @@ let test_exn_backtrace () = (* Don't move this test in the file. *)
                  Raised at file \"pervasives.ml\", line 32, characters 22-33\n\
                  Called from file \"test/test.ml\", line 8, characters 6-21"
       end
+*)
 
 let test_dump_uchar () =
  let str u = Format.asprintf "%a" Fmt.Dump.uchar u in
@@ -60,7 +62,6 @@ let test_kstrf_strf_like_partial_app () =
 
 
 let tests () =
-  test_exn_backtrace ();
   test_dump_uchar ();
   test_utf_8 ();
   test_style_renderer ();
@@ -71,7 +72,7 @@ let tests () =
 let () = tests ()
 
 (*---------------------------------------------------------------------------
-   Copyright (c) 2015 Daniel C. Bünzli
+   Copyright (c) 2015 The fmt programmers
 
    Permission to use, copy, modify, and/or distribute this software for any
    purpose with or without fee is hereby granted, provided that the above
