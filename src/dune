@@ -1,7 +1,7 @@
 (library
  (name fmt)
  (public_name fmt)
- (libraries result)
+ (libraries result stdlib-shims)
  (modules fmt)
  (flags :standard -w -3-6-27-34-50)
  (wrapped false))
